@@ -82,6 +82,15 @@ h3 { font-size: 1rem; margin: 1rem 0 0.5rem; }
 /* Analyze form */
 .analyze-form { margin: 2rem 0; }
 .analyze-form label { display: block; margin-bottom: 0.5rem; color: var(--text-secondary); }
+.source-toggle { display: flex; gap: 0; margin-bottom: 1rem; }
+.toggle-btn {
+    padding: 0.5rem 1.25rem; border: 1px solid var(--border);
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+}
+.toggle-btn:first-child { border-radius: 6px 0 0 6px; }
+.toggle-btn:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+.toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .input-group { display: flex; gap: 0.5rem; }
 .input-path {
     flex: 1; padding: 0.6rem 0.75rem;

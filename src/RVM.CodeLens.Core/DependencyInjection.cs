@@ -1,4 +1,5 @@
 using RVM.CodeLens.Core.Analysis;
+using RVM.CodeLens.Core.Services;
 using RVM.CodeLens.Core.Workspace;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +16,7 @@ public static class DependencyInjection
         services.AddSingleton<IDependencyGraphBuilder, DependencyGraphBuilder>();
         services.AddSingleton<IArchitectureDetector, ArchitectureDetector>();
         services.AddTransient<IGitAnalyzer, GitAnalyzer>();
+        services.AddTransient<IGitCloneService, GitCloneService>();
 
         return services;
     }

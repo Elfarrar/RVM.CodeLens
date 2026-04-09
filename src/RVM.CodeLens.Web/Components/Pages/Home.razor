@@ -1,20 +1,42 @@
 @page "/"
+@using RVM.CodeLens.Core.Services
 @inject IAnalysisStateService StateService
 @inject ISolutionAnalyzer Analyzer
+@inject IGitCloneService CloneService
 @inject NavigationManager Navigation
 
 <h1>RVM.CodeLens</h1>
 <p class="subtitle">Analyze your .NET solution</p>
 
 <div class="analyze-form">
-    <label for="solutionPath">Solution path (.sln or .slnx):</label>
-    <div class="input-group">
-        <input id="solutionPath" type="text" @bind="SolutionPath"
-               placeholder="C:\path\to\solution.slnx" class="input-path" />
-        <button class="btn-analyze" @onclick="AnalyzeAsync" disabled="@IsAnalyzing">
-            @(IsAnalyzing ? "Analyzing..." : "Analyze")
-        </button>
+    <div class="source-toggle">
+        <button class="toggle-btn @(UseUrl ? "" : "active")" @onclick="() => UseUrl = false">Local Path</button>
+        <button class="toggle-btn @(UseUrl ? "active" : "")" @onclick="() => UseUrl = true">Git Repository</button>
     </div>
+
+    @if (UseUrl)
+    {
+        <label for="repoUrl">Public Git repository URL:</label>
+        <div class="input-group">
+            <input id="repoUrl" type="text" @bind="RepositoryUrl"
+                   placeholder="https://github.com/user/repo.git" class="input-path" />
+            <button class="btn-analyze" @onclick="AnalyzeFromUrlAsync" disabled="@IsAnalyzing">
+                @(IsAnalyzing ? StatusMessage : "Clone & Analyze")
+            </button>
+        </div>
+    }
+    else
+    {
+        <label for="solutionPath">Solution path (.sln or .slnx):</label>
+        <div class="input-group">
+            <input id="solutionPath" type="text" @bind="SolutionPath"
+                   placeholder="C:\path\to\solution.slnx" class="input-path" />
+            <button class="btn-analyze" @onclick="AnalyzeLocalAsync" disabled="@IsAnalyzing">
+                @(IsAnalyzing ? "Analyzing..." : "Analyze")
+            </button>
+        </div>
+    }
+
     @if (!string.IsNullOrEmpty(ErrorMessage))
     {
         <p class="error">@ErrorMessage</p>
@@ -33,10 +55,13 @@
 
 @code {
     private string SolutionPath { get; set; } = "";
+    private string RepositoryUrl { get; set; } = "";
+    private bool UseUrl { get; set; }
     private bool IsAnalyzing { get; set; }
+    private string StatusMessage { get; set; } = "Analyzing...";
     private string? ErrorMessage { get; set; }
 
-    private async Task AnalyzeAsync()
+    private async Task AnalyzeLocalAsync()
     {
         if (string.IsNullOrWhiteSpace(SolutionPath)) return;
 
@@ -57,6 +82,42 @@
         finally
         {
             IsAnalyzing = false;
+        }
+    }
+
+    private async Task AnalyzeFromUrlAsync()
+    {
+        if (string.IsNullOrWhiteSpace(RepositoryUrl)) return;
+
+        IsAnalyzing = true;
+        ErrorMessage = null;
+        StatusMessage = "Cloning...";
+        StateHasChanged();
+
+        string? clonePath = null;
+        try
+        {
+            var cloneResult = await CloneService.CloneAndDiscoverAsync(RepositoryUrl);
+            clonePath = cloneResult.ClonePath;
+
+            StatusMessage = "Analyzing...";
+            StateHasChanged();
+
+            var result = await Analyzer.AnalyzeAsync(cloneResult.SolutionPath);
+            StateService.SetCurrentAnalysis(result);
+            Navigation.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            if (clonePath is not null)
+                CloneService.Cleanup(clonePath);
+
+            IsAnalyzing = false;
+            StatusMessage = "Analyzing...";
         }
     }
 }

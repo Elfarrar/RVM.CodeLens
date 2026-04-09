@@ -1,12 +1,13 @@
 using RVM.CodeLens.Core.Analysis;
 using RVM.CodeLens.Core.Models;
+using RVM.CodeLens.Core.Services;
 using RVM.CodeLens.Web.Services;
 
 namespace RVM.CodeLens.Web.Api;
 
 public static class AnalysisEndpoints
 {
-    public record AnalyzeRequest(string SolutionPath);
+    public record AnalyzeRequest(string? SolutionPath, string? RepositoryUrl);
 
     public static void MapAnalysisEndpoints(this WebApplication app)
     {
@@ -15,12 +16,39 @@ public static class AnalysisEndpoints
         group.MapPost("/analyze", async (
             AnalyzeRequest request,
             ISolutionAnalyzer analyzer,
+            IGitCloneService cloneService,
             IAnalysisStateService state,
             CancellationToken ct) =>
         {
-            var result = await analyzer.AnalyzeAsync(request.SolutionPath, ct);
-            state.SetCurrentAnalysis(result);
-            return Results.Ok(result);
+            string solutionPath;
+            string? clonePath = null;
+
+            if (!string.IsNullOrWhiteSpace(request.RepositoryUrl))
+            {
+                var cloneResult = await cloneService.CloneAndDiscoverAsync(request.RepositoryUrl, ct);
+                solutionPath = cloneResult.SolutionPath;
+                clonePath = cloneResult.ClonePath;
+            }
+            else if (!string.IsNullOrWhiteSpace(request.SolutionPath))
+            {
+                solutionPath = request.SolutionPath;
+            }
+            else
+            {
+                return Results.BadRequest("Either SolutionPath or RepositoryUrl is required.");
+            }
+
+            try
+            {
+                var result = await analyzer.AnalyzeAsync(solutionPath, ct);
+                state.SetCurrentAnalysis(result);
+                return Results.Ok(result);
+            }
+            finally
+            {
+                if (clonePath is not null)
+                    cloneService.Cleanup(clonePath);
+            }
         });
 
         group.MapGet("/analysis/current", (IAnalysisStateService state) =>
