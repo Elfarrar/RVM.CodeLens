@@ -1,3 +1,5 @@
+*[English](README.en.md) | **Português***
+
 # RVM.CodeLens
 
 Ferramenta de analise estatica para solucoes .NET que calcula metricas de codigo, detecta padroes arquiteturais, mapeia dependencias e identifica hot spots via historico Git.
