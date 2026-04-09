@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+<div class="app-layout">
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>RVM.CodeLens</h2>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="/" class="nav-link">Home</a></li>
+            <li><a href="/dashboard" class="nav-link">Dashboard</a></li>
+            <li><a href="/deps" class="nav-link">Dependencies</a></li>
+            <li><a href="/metrics" class="nav-link">Metrics</a></li>
+            <li><a href="/hotspots" class="nav-link">Hot Spots</a></li>
+            <li><a href="/architecture" class="nav-link">Architecture</a></li>
+        </ul>
+    </nav>
+    <main class="main-content">
+        @Body
+    </main>
+</div>

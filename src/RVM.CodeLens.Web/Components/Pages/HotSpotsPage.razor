@@ -1,0 +1,95 @@
+@page "/hotspots"
+@inject IAnalysisStateService StateService
+@inject IGitAnalyzer GitAnalyzer
+@inject IJSRuntime JS
+
+<h1>Hot Spots</h1>
+
+@if (Analysis is null)
+{
+    <p>No analysis loaded. <a href="/">Go to Home</a> to analyze a solution.</p>
+}
+else if (IsLoading)
+{
+    <p>Analyzing git history...</p>
+}
+else if (HotSpots is null || HotSpots.Count == 0)
+{
+    <p>No hot spots found. The solution directory may not be a git repository.</p>
+}
+else
+{
+    <div id="hotspot-scatter" class="chart-container"></div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Commits</th>
+                <th>Authors</th>
+                <th>Avg CC</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var spot in HotSpots.Take(20))
+            {
+                <tr>
+                    <td>@spot.FilePath</td>
+                    <td>@spot.CommitCount</td>
+                    <td>@spot.AuthorCount</td>
+                    <td class="@GetCCClass(spot.Complexity)">@spot.Complexity.ToString("F1")</td>
+                    <td class="@GetScoreClass(spot.Score)">@spot.Score.ToString("F1")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private SolutionAnalysis? Analysis;
+    private List<HotSpot>? HotSpots;
+    private bool IsLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Analysis = StateService.GetCurrentAnalysis();
+        if (Analysis is null) return;
+
+        IsLoading = true;
+        StateHasChanged();
+
+        var repoPath = Path.GetDirectoryName(Analysis.SolutionPath)!;
+        HotSpots = await Task.Run(() => GitAnalyzer.AnalyzeHotSpots(repoPath));
+        IsLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender is false && HotSpots is { Count: > 0 })
+        {
+            var data = HotSpots.Take(30).Select(h => new
+            {
+                file = Path.GetFileName(h.FilePath),
+                commits = h.CommitCount,
+                complexity = h.Complexity,
+                score = h.Score
+            });
+            await JS.InvokeVoidAsync("renderScatterPlot", "hotspot-scatter", data);
+        }
+    }
+
+    private static string GetCCClass(double cc) => cc switch
+    {
+        <= 5 => "metric-good",
+        <= 10 => "metric-warn",
+        _ => "metric-bad"
+    };
+
+    private static string GetScoreClass(double score) => score switch
+    {
+        <= 30 => "metric-good",
+        <= 80 => "metric-warn",
+        _ => "metric-bad"
+    };
+}

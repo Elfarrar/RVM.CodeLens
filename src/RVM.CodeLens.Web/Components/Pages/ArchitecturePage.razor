@@ -1,0 +1,52 @@
+@page "/architecture"
+@inject IAnalysisStateService StateService
+
+<h1>Architecture</h1>
+
+@if (Analysis is null)
+{
+    <p>No analysis loaded. <a href="/">Go to Home</a> to analyze a solution.</p>
+}
+else
+{
+    <div class="architecture-layers">
+        @foreach (var layer in Analysis.Architecture.Layers)
+        {
+            <div class="arch-layer">
+                <h3>@layer.Name</h3>
+                <div class="arch-projects">
+                    @foreach (var project in layer.Projects)
+                    {
+                        <span class="arch-badge">@project</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <h2>Violations</h2>
+    @if (Analysis.Architecture.Violations.Count == 0)
+    {
+        <div class="success-box">
+            No architecture violations detected.
+        </div>
+    }
+    else
+    {
+        <div class="violations-list">
+            @foreach (var violation in Analysis.Architecture.Violations)
+            {
+                <div class="violation-item">@violation</div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private SolutionAnalysis? Analysis;
+
+    protected override void OnInitialized()
+    {
+        Analysis = StateService.GetCurrentAnalysis();
+    }
+}

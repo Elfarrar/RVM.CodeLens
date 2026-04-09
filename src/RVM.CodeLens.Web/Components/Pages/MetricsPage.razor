@@ -1,0 +1,82 @@
+@page "/metrics"
+@inject IAnalysisStateService StateService
+
+<h1>Code Metrics</h1>
+
+@if (Analysis is null)
+{
+    <p>No analysis loaded. <a href="/">Go to Home</a> to analyze a solution.</p>
+}
+else
+{
+    @foreach (var project in Analysis.Projects)
+    {
+        <div class="project-section">
+            <h2>@project.Name</h2>
+            <div class="project-summary">
+                @project.Metrics.FileCount files | @project.Metrics.CodeLines.ToString("N0") LOC |
+                @project.Metrics.ClassCount classes | @project.Metrics.MethodCount methods
+            </div>
+
+            @{
+                var complexMethods = project.Metrics.Files
+                    .SelectMany(f => f.Types)
+                    .SelectMany(t => t.Methods.Select(m => new { TypeName = t.Name, Method = m }))
+                    .Where(x => x.Method.CyclomaticComplexity > 3)
+                    .OrderByDescending(x => x.Method.CyclomaticComplexity)
+                    .Take(15)
+                    .ToList();
+            }
+
+            @if (complexMethods.Count > 0)
+            {
+                <h3>Complex Methods (CC > 3)</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Method</th>
+                            <th>Lines</th>
+                            <th>CC</th>
+                            <th>Coupling</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in complexMethods)
+                        {
+                            <tr>
+                                <td>@m.TypeName</td>
+                                <td>@m.Method.Name</td>
+                                <td>@m.Method.LineCount</td>
+                                <td class="@GetCCClass(m.Method.CyclomaticComplexity)">
+                                    @m.Method.CyclomaticComplexity
+                                </td>
+                                <td>@m.Method.ClassCoupling</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p class="dim">All methods have low complexity. Nice!</p>
+            }
+        </div>
+    }
+}
+
+@code {
+    private SolutionAnalysis? Analysis;
+
+    protected override void OnInitialized()
+    {
+        Analysis = StateService.GetCurrentAnalysis();
+    }
+
+    private static string GetCCClass(int cc) => cc switch
+    {
+        <= 5 => "metric-good",
+        <= 10 => "metric-warn",
+        _ => "metric-bad"
+    };
+}

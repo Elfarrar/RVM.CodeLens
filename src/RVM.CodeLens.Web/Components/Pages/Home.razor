@@ -1,0 +1,62 @@
+@page "/"
+@inject IAnalysisStateService StateService
+@inject ISolutionAnalyzer Analyzer
+@inject NavigationManager Navigation
+
+<h1>RVM.CodeLens</h1>
+<p class="subtitle">Analyze your .NET solution</p>
+
+<div class="analyze-form">
+    <label for="solutionPath">Solution path (.sln or .slnx):</label>
+    <div class="input-group">
+        <input id="solutionPath" type="text" @bind="SolutionPath"
+               placeholder="C:\path\to\solution.slnx" class="input-path" />
+        <button class="btn-analyze" @onclick="AnalyzeAsync" disabled="@IsAnalyzing">
+            @(IsAnalyzing ? "Analyzing..." : "Analyze")
+        </button>
+    </div>
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p class="error">@ErrorMessage</p>
+    }
+</div>
+
+@if (StateService.GetCurrentAnalysis() is { } current)
+{
+    <div class="current-analysis">
+        <h3>Current Analysis</h3>
+        <p><strong>@current.SolutionName</strong> — @current.Projects.Count projects, @current.Projects.Sum(p => p.Metrics.CodeLines).ToString("N0") LOC</p>
+        <p class="dim">Analyzed at @current.AnalyzedAt.ToString("yyyy-MM-dd HH:mm:ss") UTC</p>
+        <a href="/dashboard" class="btn-go">Go to Dashboard →</a>
+    </div>
+}
+
+@code {
+    private string SolutionPath { get; set; } = "";
+    private bool IsAnalyzing { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    private async Task AnalyzeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(SolutionPath)) return;
+
+        IsAnalyzing = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Analyzer.AnalyzeAsync(Path.GetFullPath(SolutionPath));
+            StateService.SetCurrentAnalysis(result);
+            Navigation.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsAnalyzing = false;
+        }
+    }
+}

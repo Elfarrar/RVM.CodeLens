@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RVM.CodeLens.Core/RVM.CodeLens.Core.csproj" />
+    <Project Path="src/RVM.CodeLens.CLI/RVM.CodeLens.CLI.csproj" />
+    <Project Path="src/RVM.CodeLens.Web/RVM.CodeLens.Web.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/RVM.CodeLens.Core.Tests/RVM.CodeLens.Core.Tests.csproj" />
+  </Folder>
+</Solution>

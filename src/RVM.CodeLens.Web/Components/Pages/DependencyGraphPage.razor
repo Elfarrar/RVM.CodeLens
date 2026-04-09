@@ -1,0 +1,59 @@
+@page "/deps"
+@inject IAnalysisStateService StateService
+@inject IJSRuntime JS
+
+<h1>Dependency Graph</h1>
+
+@if (Analysis is null)
+{
+    <p>No analysis loaded. <a href="/">Go to Home</a> to analyze a solution.</p>
+}
+else
+{
+    <div class="graph-controls">
+        <label>
+            <input type="checkbox" @bind="ShowPackages" @bind:after="RefreshGraph" />
+            Show NuGet Packages
+        </label>
+    </div>
+    <div id="dep-graph" class="graph-container"></div>
+}
+
+@code {
+    private SolutionAnalysis? Analysis;
+    private bool ShowPackages;
+
+    protected override void OnInitialized()
+    {
+        Analysis = StateService.GetCurrentAnalysis();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Analysis is not null)
+        {
+            await RenderGraph();
+        }
+    }
+
+    private async Task RefreshGraph()
+    {
+        await RenderGraph();
+    }
+
+    private async Task RenderGraph()
+    {
+        if (Analysis is null) return;
+
+        var graph = Analysis.DependencyGraph;
+        var nodes = ShowPackages
+            ? graph.Nodes
+            : graph.Nodes.Where(n => n.Type == "project").ToList();
+        var nodeIds = nodes.Select(n => n.Id).ToHashSet();
+        var edges = graph.Edges.Where(e => nodeIds.Contains(e.Source) && nodeIds.Contains(e.Target)).ToList();
+
+        await JS.InvokeVoidAsync("renderForceGraph", "dep-graph",
+            nodes.Select(n => new { id = n.Id, label = n.Label, type = n.Type }),
+            edges.Select(e => new { source = e.Source, target = e.Target, type = e.Type }));
+    }
+}

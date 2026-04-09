@@ -1,0 +1,122 @@
+@page "/dashboard"
+@inject IAnalysisStateService StateService
+@inject IJSRuntime JS
+
+<h1>Dashboard</h1>
+
+@if (Analysis is null)
+{
+    <p>No analysis loaded. <a href="/">Go to Home</a> to analyze a solution.</p>
+}
+else
+{
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">@Analysis.Projects.Count</div>
+            <div class="stat-label">Projects</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@TotalLoc.ToString("N0")</div>
+            <div class="stat-label">Lines of Code</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@TotalFiles</div>
+            <div class="stat-label">Files</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@TotalClasses</div>
+            <div class="stat-label">Classes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">@TotalMethods</div>
+            <div class="stat-label">Methods</div>
+        </div>
+        <div class="stat-card @ComplexityColor">
+            <div class="stat-value">@AvgComplexity.ToString("F1")</div>
+            <div class="stat-label">Avg Complexity</div>
+        </div>
+    </div>
+
+    <h2>Lines of Code by Project</h2>
+    <div id="loc-chart" class="chart-container"></div>
+
+    <h2>Projects</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Framework</th>
+                <th>Files</th>
+                <th>LOC</th>
+                <th>Classes</th>
+                <th>Methods</th>
+                <th>Avg CC</th>
+                <th>Avg MI</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in Analysis.Projects)
+            {
+                <tr>
+                    <td>@project.Name</td>
+                    <td>@project.TargetFramework</td>
+                    <td>@project.Metrics.FileCount</td>
+                    <td>@project.Metrics.CodeLines.ToString("N0")</td>
+                    <td>@project.Metrics.ClassCount</td>
+                    <td>@project.Metrics.MethodCount</td>
+                    <td class="@GetComplexityClass(project.Metrics.AverageCyclomaticComplexity)">
+                        @project.Metrics.AverageCyclomaticComplexity.ToString("F1")
+                    </td>
+                    <td class="@GetMaintainabilityClass(project.Metrics.AverageMaintainabilityIndex)">
+                        @project.Metrics.AverageMaintainabilityIndex.ToString("F1")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private SolutionAnalysis? Analysis;
+    private int TotalLoc, TotalFiles, TotalClasses, TotalMethods;
+    private double AvgComplexity;
+    private string ComplexityColor = "";
+
+    protected override void OnInitialized()
+    {
+        Analysis = StateService.GetCurrentAnalysis();
+        if (Analysis is not null)
+        {
+            TotalLoc = Analysis.Projects.Sum(p => p.Metrics.CodeLines);
+            TotalFiles = Analysis.Projects.Sum(p => p.Metrics.FileCount);
+            TotalClasses = Analysis.Projects.Sum(p => p.Metrics.ClassCount);
+            TotalMethods = Analysis.Projects.Sum(p => p.Metrics.MethodCount);
+            AvgComplexity = Analysis.Projects.Count > 0
+                ? Analysis.Projects.Average(p => p.Metrics.AverageCyclomaticComplexity) : 0;
+            ComplexityColor = GetComplexityClass(AvgComplexity);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Analysis is not null)
+        {
+            var chartData = Analysis.Projects.Select(p => new { label = p.Name, value = p.Metrics.CodeLines }).ToArray();
+            await JS.InvokeVoidAsync("renderBarChart", "loc-chart", chartData);
+        }
+    }
+
+    private static string GetComplexityClass(double cc) => cc switch
+    {
+        <= 5 => "metric-good",
+        <= 10 => "metric-warn",
+        _ => "metric-bad"
+    };
+
+    private static string GetMaintainabilityClass(double mi) => mi switch
+    {
+        >= 80 => "metric-good",
+        >= 50 => "metric-warn",
+        _ => "metric-bad"
+    };
+}
