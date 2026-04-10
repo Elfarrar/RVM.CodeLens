@@ -8,7 +8,7 @@ public class GitCloneService(ILogger<GitCloneService> logger) : IGitCloneService
     public Task<GitCloneResult> CloneAndDiscoverAsync(string repositoryUrl, CancellationToken ct = default)
     {
         var repoName = ExtractRepoName(repositoryUrl);
-        var clonePath = Path.Combine(Path.GetTempPath(), "codelens-clones", $"{repoName}-{Guid.NewGuid():N[..8]}");
+        var clonePath = Path.Combine(Path.GetTempPath(), "codelens-clones", $"{repoName}-{Guid.NewGuid().ToString("N")[..8]}");
 
         logger.LogInformation("Cloning {Url} to {Path}", repositoryUrl, clonePath);
 
