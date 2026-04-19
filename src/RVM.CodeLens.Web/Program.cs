@@ -12,10 +12,20 @@ MsBuildInitializer.EnsureInitialized();
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
     .WriteTo.Console(new CompactJsonFormatter())
-    .CreateLogger();
-builder.Host.UseSerilog();
+    .CreateBootstrapLogger();
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(new CompactJsonFormatter());
+
+    var seqUrl = context.Configuration["Seq:ServerUrl"];
+    if (!string.IsNullOrEmpty(seqUrl))
+        configuration.WriteTo.Seq(seqUrl);
+});
 
 builder.Services.AddCodeLensCore();
 builder.Services.AddSingleton<IAnalysisStateService, AnalysisStateService>();
