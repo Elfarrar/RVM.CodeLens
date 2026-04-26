@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RVM.CodeLens.Core\RVM.CodeLens.Core.csproj" />
+    <ProjectReference Include="..\..\src\RVM.CodeLens.Web\RVM.CodeLens.Web.csproj" />
   </ItemGroup>
 
 </Project>
