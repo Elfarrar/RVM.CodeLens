@@ -1,7 +1,9 @@
 @inherits LayoutComponentBase
 
+<a class="skip-nav" href="#main-content">Pular para o conteúdo</a>
+
 <div class="app-layout">
-    <nav class="sidebar">
+    <nav class="sidebar" aria-label="Menu principal">
         <div class="sidebar-header">
             <h2>RVM.CodeLens</h2>
         </div>
@@ -14,7 +16,7 @@
             <li><a href="/architecture" class="nav-link">Architecture</a></li>
         </ul>
     </nav>
-    <main class="main-content">
+    <main id="main-content" class="main-content" role="main">
         @Body
     </main>
 </div>
